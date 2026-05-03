@@ -1,0 +1,87 @@
+
+============================================================
+  SYSTEM ASLR STATUS
+============================================================
+  ASLR: FULL (2) - stack, mmap, and heap randomised
+
+============================================================
+  COMPILING BINARIES
+============================================================
+  Compiled: no mitigations (-fno-stack-protector -no-pie -z norelro)
+  Compiled: stack canary only (-fstack-protector-strong)
+  Compiled: PIE only (-pie -fPIE)
+  Compiled: Full RELRO (-z relro -z now)
+  Compiled: ALL mitigations (production hardened)
+
+============================================================
+  STACK OVERFLOW TEST (100-byte input into 64-byte buffer)
+============================================================
+  BINARY                                   RESULT
+  ---------------------------------------------------------
+  No mitigations                           CRASHED (exit code 139)
+  Stack canary only                        BLOCKED (stack smashing detected)
+  PIE only (no canary)                     CRASHED (exit code 139)
+  Full RELRO (no canary)                   CRASHED (exit code 139)
+  All mitigations                          BLOCKED (stack smashing detected)
+
+============================================================
+  FORMAT STRING TEST (%x.%x.%x.%x)
+============================================================
+  BINARY                                   RESULT
+  ---------------------------------------------------------
+  No mitigations                           LEAKED (stack values visible in output)
+  Stack canary only                        LEAKED (stack values visible in output)
+  PIE only                                 LEAKED (stack values visible in output)
+  Full RELRO                               LEAKED (stack values visible in output)
+  All mitigations (FORTIFY_SOURCE=2)       LEAKED (stack values visible in output)
+
+============================================================
+  ASLR EFFECTIVENESS (address randomisation between runs)
+============================================================
+  BINARY                                   RESULT
+  ---------------------------------------------------------
+  No mitigations (no PIE)                  STATIC (same address both runs: 0x402071)
+  PIE enabled (binary randomised)          RANDOMISED (0x607e6e8da071 vs 0x608db8501071)
+  All mitigations                          RANDOMISED (0x579670448071 vs 0x627ac26d2071)
+
+============================================================
+  BINARY HARDENING PROPERTIES (checksec)
+============================================================
+
+  bin_no_mitigations:
+
+  bin_canary_only:
+
+  bin_pie_only:
+
+  bin_full_relro:
+
+  bin_all_mitigations:
+
+============================================================
+  SUMMARY
+============================================================
+
+  Key findings:
+  
+  Stack canary: Blocks stack buffer overflow by detecting corruption
+    before the return address is used. Most important single mitigation.
+    
+  PIE + ASLR: Randomises binary load address each run, making it
+    impossible to hardcode addresses in exploits. Addresses change
+    between runs so an attacker cannot reliably aim at specific
+    functions or gadgets.
+    
+  Full RELRO: Makes GOT (Global Offset Table) read-only after startup.
+    Prevents attackers from overwriting function pointers stored there
+    — a common technique to achieve code execution after heap overflow.
+    
+  FORTIFY_SOURCE: Adds bounds checking to common string functions
+    (strcpy, sprintf etc.) at compile time. Catches some overflows
+    before they happen.
+    
+  All four together represent the baseline hardening Google applies
+  to production binaries including QEMU in Google Cloud.
+  
+  Results saved to: results.txt
+
